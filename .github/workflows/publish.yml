@@ -1,0 +1,51 @@
+name: Publish Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      update_type:
+        description: "Version bump type (patch, minor, major)"
+        required: true
+        default: "patch"
+
+jobs:
+  test:
+    uses: ./.github/workflows/_test.yml
+
+  publish:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    # NOTE: change this to "production" on real repos
+    environment: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: false
+      # TODO: make this optional (i.e. rebuild, republish, for whichever reason)
+      - name: Bump version
+        id: bump
+        run: |
+          version=$(poetry version ${{ github.event.inputs.update_type }} | awk '{print $2}')
+          echo "new_version=$version" >> $GITHUB_OUTPUT
+      - name: Commit version bump and tag
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git commit -am "Bump ${{ github.event.inputs.update_type }} version to ${{ steps.bump.outputs.new_version }}"
+          git tag v${{ steps.bump.outputs.new_version }}
+          git push origin HEAD
+          git push origin v${{ steps.bump.outputs.new_version }}
+      - name: Build library
+        run: poetry build --format sdist
+      - name: Publish to PyPI
+        run: poetry publish ${{ vars.PUBLISH_ARGS }}
+      - name: Notify
+        run: echo "Published version ${{ steps.bump.outputs.new_version }} (${{ github.event.inputs.update_type }})"
