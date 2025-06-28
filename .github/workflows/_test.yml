@@ -1,4 +1,4 @@
-name: [internal] test
+name: "[internal] test"
 
 on:
   workflow_call:
