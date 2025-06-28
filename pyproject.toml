@@ -21,9 +21,6 @@ epic-jupyter = {version = "*", optional = true}
 pytest = "*"
 pytest-cov = "*"
 
-[tool.poetry.repositories.test-pypi]
-url = "https://test.pypi.org/legacy/"
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
