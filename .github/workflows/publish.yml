@@ -28,6 +28,11 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
+          #####
+          # debug
+          echo "Using slack webhook ending in: ${SLACK_WEBHOOK_URL: -4}"
+          echo "$SLACK_WEBHOOK_URL" | wc
+          #####
           curl -X POST -H 'Content-type: application/json' \
             --data "{
               \"text\": \"🚀 *Publishing started*: \`${{ github.repository }}@${{ github.ref_name }}\`\nTriggered by: \`${{ github.actor }}\`\nVersion bump: \`${{ github.event.inputs.update_type }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>\"
