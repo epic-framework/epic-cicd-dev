@@ -32,10 +32,11 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
-            --data "{
-              \"text\": \"🚀 *Publishing started*: \`${{ github.repository }}@${{ github.ref_name }}\`\nTriggered by: \`${{ github.actor }}\`\nVersion bump: \`${{ github.event.inputs.update_type }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>\"
-            }" \
-            "$SLACK_WEBHOOK_URL"
+            --data @- "$SLACK_WEBHOOK_URL" <<EOF
+            {
+              "text": "🚀 *Publishing started*: \`${{ github.repository }}@${{ github.ref_name }}\`\nTriggered by: \`${{ github.actor }}\`\nVersion bump: \`${{ github.event.inputs.update_type }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
+            }
+          EOF
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -87,7 +88,8 @@ jobs:
       - name: Notify Slack (publish done)
         run: |
           curl -X POST -H 'Content-type: application/json' \
-            --data "{
-              \"text\": \"✅ Published version ${{ steps.bump.outputs.new_version }}\nSource: \`${{ github.repository }}@${{ github.ref_name }}\`\nTriggered by: \`${{ github.actor }}\`\nVersion bump: \`${{ github.event.inputs.update_type }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>\"
-            }" \
-            "$SLACK_WEBHOOK_URL"
+            --data @- "$SLACK_WEBHOOK_URL" <<EOF
+            {
+              "text": "✅ Published version ${{ steps.bump.outputs.new_version }}\nSource: \`${{ github.repository }}@${{ github.ref_name }}\`\nTriggered by: \`${{ github.actor }}\`\nVersion bump: \`${{ github.event.inputs.update_type }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
+            }
+          EOF
