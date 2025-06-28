@@ -37,7 +37,7 @@ jobs:
             --data "{
               \"text\": \"🚀 *Publishing started*: \`${{ github.repository }}@${{ github.ref_name }}\`\nTriggered by: \`${{ github.actor }}\`\nVersion bump: \`${{ github.event.inputs.update_type }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>\"
             }" \
-            \"$SLACK_WEBHOOK_URL\"
+            "$SLACK_WEBHOOK_URL"
       - name: Checkout
         uses: actions/checkout@v4
       - name: Set up Python
