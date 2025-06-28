@@ -1,3 +1,4 @@
+# TODO:!! search for test-pypi below and change it when using on real repos!
 name: Publish Package
 
 on:
@@ -14,17 +15,16 @@ on:
           - major
 
 jobs:
-#  test:
-#    uses: ./.github/workflows/_test.yml
+  test:
+    uses: ./.github/workflows/_test.yml
 
   publish:
-#    needs: test
+    needs: test
     permissions:
       id-token: write
       contents: read
     if: github.ref == 'refs/heads/main'
-    # NOTE: change this to "production" on real repos
-    environment: test
+    environment: production
     runs-on: ubuntu-latest
     steps:
       - name: Notify Slack (publish started)
@@ -72,12 +72,7 @@ jobs:
         with:
           name: library
           path: dist/*.tar.gz
-#      - name: Publish to PyPI
-#        run: |
-#          # note: this is temp for test-pypi only
-#          poetry config repositories.test-pypi https://test.pypi.org/legacy/
-#          poetry publish ${{ vars.PUBLISH_ARGS }}
-      # NOTE: change this to PyPI (remove repository-url) on real repos
+      # TODO:! change this to PyPI (remove repository-url) on real repos
       - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
