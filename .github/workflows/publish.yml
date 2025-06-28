@@ -24,6 +24,15 @@ jobs:
     environment: test
     runs-on: ubuntu-latest
     steps:
+      - name: Notify Slack (publish started)
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"text\": \"🚀 *Publishing started*: \`${{ github.repository }}@${{ github.ref_name }}\`\nTriggered by: \`${{ github.actor }}\`\nVersion bump: \`${{ github.event.inputs.update_type }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>\"
+            }" \
+            \"$SLACK_WEBHOOK_URL\"
       - name: Checkout
         uses: actions/checkout@v4
       - name: Set up Python
