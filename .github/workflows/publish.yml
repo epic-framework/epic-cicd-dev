@@ -69,7 +69,10 @@ jobs:
           name: library
           path: dist/*.tar.gz
       - name: Publish to PyPI
-        run: poetry publish ${{ vars.PUBLISH_ARGS }}
+        run: |
+          # note: this is temp for test-pypi only
+          poetry config repositories.test-pypi https://test.pypi.org/legacy/
+          poetry publish ${{ vars.PUBLISH_ARGS }}
       - name: Notify
         run: echo "Published version ${{ steps.bump.outputs.new_version }} (${{ github.event.inputs.update_type }})"
       - name: Notify Slack (publish done)
