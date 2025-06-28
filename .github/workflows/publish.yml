@@ -86,10 +86,12 @@ jobs:
       - name: Notify
         run: echo "Published version ${{ steps.bump.outputs.new_version }} (${{ github.event.inputs.update_type }})"
       - name: Notify Slack (publish done)
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
             --data @- "$SLACK_WEBHOOK_URL" <<EOF
             {
-              "text": "✅ Published version ${{ steps.bump.outputs.new_version }}\nSource: \`${{ github.repository }}@${{ github.ref_name }}\`\nTriggered by: \`${{ github.actor }}\`\nVersion bump: \`${{ github.event.inputs.update_type }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
+              "text": "✅ Published version ${{ steps.bump.outputs.new_version }} for \`${{ github.repository }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
             }
           EOF
