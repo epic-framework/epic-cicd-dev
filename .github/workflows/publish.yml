@@ -19,6 +19,8 @@ jobs:
 
   publish:
 #    needs: test
+    permissions:
+      id-token: write
     if: github.ref == 'refs/heads/main'
     # NOTE: change this to "production" on real repos
     environment: test
