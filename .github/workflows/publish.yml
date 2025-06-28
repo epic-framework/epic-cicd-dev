@@ -28,11 +28,6 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          #####
-          # debug
-          echo "Using slack webhook ending in: ${SLACK_WEBHOOK_URL: -4}"
-          echo "$SLACK_WEBHOOK_URL" | wc
-          #####
           curl -X POST -H 'Content-type: application/json' \
             --data "{
               \"text\": \"🚀 *Publishing started*: \`${{ github.repository }}@${{ github.ref_name }}\`\nTriggered by: \`${{ github.actor }}\`\nVersion bump: \`${{ github.event.inputs.update_type }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>\"
@@ -40,6 +35,8 @@ jobs:
             "$SLACK_WEBHOOK_URL"
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -62,11 +59,6 @@ jobs:
           git tag "v${{ steps.bump.outputs.new_version }}"
           # TODO: switch from PAT to App before it expires in June 2026
           git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git
-          #####
-          # debug info
-          git remote -v
-          echo "Using token ending in: ${GH_PAT: -4}"
-          #####
           git push origin HEAD --tags
       - name: Build library
         run: poetry build --format sdist
@@ -79,3 +71,10 @@ jobs:
         run: poetry publish ${{ vars.PUBLISH_ARGS }}
       - name: Notify
         run: echo "Published version ${{ steps.bump.outputs.new_version }} (${{ github.event.inputs.update_type }})"
+      - name: Notify Slack (publish done)
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"text\": \"✅ Published version ${{ steps.bump.outputs.new_version }}\nSource: \`${{ github.repository }}@${{ github.ref_name }}\`\nTriggered by: \`${{ github.actor }}\`\nVersion bump: \`${{ github.event.inputs.update_type }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>\"
+            }" \
+            "$SLACK_WEBHOOK_URL"
