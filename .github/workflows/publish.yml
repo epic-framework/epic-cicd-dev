@@ -90,3 +90,14 @@ jobs:
               "text": "✅ Published version ${{ steps.bump.outputs.new_version }} for \`${{ github.repository }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
             }
           EOF
+      - name: Notify Slack (failure)
+        if: always () && failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data @- "$SLACK_WEBHOOK_URL" <<EOF
+            {
+              "text": "❌ Publish failed for version ${{ steps.bump.outputs.new_version }} of \`${{ github.repository }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
+            }
+          EOF
