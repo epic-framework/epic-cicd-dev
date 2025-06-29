@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "epic-cicd-dev"
-version = "1.2.1"
+version = "1.2.2"
 description = "Internal CI-CD development & experimentation platform"
 authors = ["Yonatan Perry", "Assaf Ben-David"]
 license = "MIT"
