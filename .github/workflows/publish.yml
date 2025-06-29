@@ -19,12 +19,12 @@ jobs:
     uses: ./.github/workflows/_test.yml
 
   publish:
+    environment: production
     needs: test
     permissions:
       id-token: write
       contents: read
     if: github.ref == 'refs/heads/main'
-    environment: production
     runs-on: ubuntu-latest
     steps:
       - name: Notify Slack (publish started)
@@ -92,6 +92,7 @@ jobs:
           EOF
 
   notify_failure:
+    environment: production
     needs: [test, publish]
     if: failure()
     runs-on: ubuntu-latest
