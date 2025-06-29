@@ -1,4 +1,4 @@
-name: Publish Package
+name: Release
 
 on:
   workflow_dispatch:
@@ -22,7 +22,22 @@ on:
           - "Test PyPI"
 
 jobs:
+  kickoff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack (publish started)
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data @- "$SLACK_WEBHOOK_URL" <<EOF
+            {
+              "text": "⚙️ *Release started*: \`${{ github.repository }}@${{ github.ref_name }}\`\nTriggered by: \`${{ github.actor }}\`\nVersion bump: \`${{ github.event.inputs.update_type }}\`${{ github.event.inputs.pypi_target == 'Test PyPI' && ' (test pypi)' || '' }}\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
+            }
+          EOF
+
   test:
+    needs: kickoff
     uses: ./.github/workflows/_test.yml
 
   publish:
@@ -34,16 +49,6 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - name: Notify Slack (publish started)
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        run: |
-          curl -X POST -H 'Content-type: application/json' \
-            --data @- "$SLACK_WEBHOOK_URL" <<EOF
-            {
-              "text": "🚀 *Publishing started*: \`${{ github.repository }}@${{ github.ref_name }}\`\nTriggered by: \`${{ github.actor }}\`\nVersion bump: \`${{ github.event.inputs.update_type }}\`${{ github.event.inputs.pypi_target == 'Test PyPI' && ' (test pypi)' || '' }}\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
-            }
-          EOF
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -114,6 +119,6 @@ jobs:
           curl -X POST -H 'Content-type: application/json' \
             --data @- "$SLACK_WEBHOOK_URL" <<EOF
             {
-              "text": "❌ *Publish process failed* for \`${{ github.repository }}\`${{ github.event.inputs.pypi_target == 'Test PyPI' && ' (test pypi)' || '' }}.\nCheck logs: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>"
+              "text": "❌ *Release process failed* for \`${{ github.repository }}\`${{ github.event.inputs.pypi_target == 'Test PyPI' && ' (test pypi)' || '' }}.\nCheck logs: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>"
             }
           EOF
