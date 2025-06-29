@@ -25,7 +25,7 @@ jobs:
   kickoff:
     runs-on: ubuntu-latest
     steps:
-      - name: Notify Slack (publish started)
+      - name: Notify Slack (release started)
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
         run: |
@@ -40,14 +40,13 @@ jobs:
     needs: kickoff
     uses: ./.github/workflows/_test.yml
 
-  publish:
-    environment: production
+  bump_and_build:
     needs: test
-    permissions:
-      id-token: write
-      contents: read
-    if: github.ref == 'refs/heads/main'
+    # note: we still need "production" here, for the GH_PAT secret; at least it has no permission to use an OIDC token
+    environment: production
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.new_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -82,6 +81,20 @@ jobs:
         with:
           name: library
           path: dist/*.tar.gz
+
+  publish:
+    needs: bump_and_build
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: library
+          path: dist/
       - name: Publish to PyPI
         if: ${{ github.event.inputs.pypi_target == 'PyPI Prod' }}
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -93,8 +106,6 @@ jobs:
         with:
           packages-dir: dist/
           repository-url: https://test.pypi.org/legacy/
-      - name: Notify
-        run: echo "Published version ${{ steps.bump.outputs.new_version }} (${{ github.event.inputs.update_type }})"
       - name: Notify Slack (publish done)
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
@@ -102,17 +113,16 @@ jobs:
           curl -X POST -H 'Content-type: application/json' \
             --data @- "$SLACK_WEBHOOK_URL" <<EOF
             {
-              "text": "✅ *Published version ${{ steps.bump.outputs.new_version }}* for \`${{ github.repository }}\`${{ github.event.inputs.pypi_target == 'Test PyPI' && ' (test pypi)' || '' }}\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
+              "text": "✅ *Published version ${{ needs.bump_and_build.outputs.version }}* for \`${{ github.repository }}\`${{ github.event.inputs.pypi_target == 'Test PyPI' && ' (test pypi)' || '' }}\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
             }
           EOF
 
   notify_failure:
-    environment: production
-    needs: [test, publish]
+    needs: [test, bump_and_build, publish]
     if: failure()
     runs-on: ubuntu-latest
     steps:
-      - name: Notify Slack (test or publish failure)
+      - name: Notify Slack (failure)
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
         run: |
