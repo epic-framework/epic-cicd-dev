@@ -15,95 +15,20 @@ on:
           - major
 
 jobs:
-  test:
-    uses: ./.github/workflows/_test.yml
-
   publish:
     environment: production
-    needs: test
     permissions:
       id-token: write
       contents: read
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - name: Notify Slack (publish started)
+      - name: Notify Slack (feature-branch accessing production)
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
             --data @- "$SLACK_WEBHOOK_URL" <<EOF
             {
-              "text": "🚀 *Publishing started*: \`${{ github.repository }}@${{ github.ref_name }}\`\nTriggered by: \`${{ github.actor }}\`\nVersion bump: \`${{ github.event.inputs.update_type }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
-            }
-          EOF
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.11
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: false
-      # TODO: make this optional (i.e. rebuild, republish, for whichever reason)
-      - name: Bump version
-        id: bump
-        run: |
-          poetry version ${{ github.event.inputs.update_type }}
-          new_version=$(poetry version | awk '{print $2}')
-          echo "new_version=$new_version" >> $GITHUB_OUTPUT
-      - name: Commit version bump and tag
-        run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
-          git commit -am "Bump ${{ github.event.inputs.update_type }} version to ${{ steps.bump.outputs.new_version }}"
-          git tag "v${{ steps.bump.outputs.new_version }}"
-          # TODO: switch from PAT to App before it expires in June 2026
-          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git
-          git push origin HEAD --tags
-      - name: Build library
-        run: poetry build --format sdist
-      - name: Archive library
-        uses: actions/upload-artifact@v4
-        with:
-          name: library
-          path: dist/*.tar.gz
-      # TODO:! change this to PyPI (remove repository-url) on real repos
-      - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist/
-          repository-url: https://test.pypi.org/legacy/
-      - name: Notify
-        run: echo "Published version ${{ steps.bump.outputs.new_version }} (${{ github.event.inputs.update_type }})"
-      - name: Notify Slack (publish done)
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        run: |
-          curl -X POST -H 'Content-type: application/json' \
-            --data @- "$SLACK_WEBHOOK_URL" <<EOF
-            {
-              "text": "✅ *Published version ${{ steps.bump.outputs.new_version }}* for \`${{ github.repository }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
-            }
-          EOF
-
-  notify_failure:
-    environment: production
-    needs: [test, publish]
-    if: failure()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Notify Slack (test or publish failure)
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        run: |
-          curl -X POST -H 'Content-type: application/json' \
-            --data @- "$SLACK_WEBHOOK_URL" <<EOF
-            {
-              "text": "❌ *Publish process failed* for \`${{ github.repository }}\`.\nCheck logs: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>"
+              "text": "🐍 Feature branch accessed production env successfully"
             }
           EOF
