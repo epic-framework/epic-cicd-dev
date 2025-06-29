@@ -13,6 +13,14 @@ on:
           - patch
           - minor
           - major
+      pypi_target:
+        description: "PyPI target"
+        required: true
+        default: "Test PyPI"  # TODO:! change to production in a real job
+        type: choice
+        options:
+          - "PyPI Prod"
+          - "Test PyPI"
 
 jobs:
   test:
@@ -34,7 +42,7 @@ jobs:
           curl -X POST -H 'Content-type: application/json' \
             --data @- "$SLACK_WEBHOOK_URL" <<EOF
             {
-              "text": "🚀 *Publishing started*: \`${{ github.repository }}@${{ github.ref_name }}\`\nTriggered by: \`${{ github.actor }}\`\nVersion bump: \`${{ github.event.inputs.update_type }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
+              "text": "🚀 *Publishing started*: \`${{ github.repository }}@${{ github.ref_name }}\`\nTriggered by: \`${{ github.actor }}\`\nVersion bump: \`${{ github.event.inputs.update_type }}\`${{ github.event.inputs.pypi_target == 'Test PyPI' && ' (test pypi)' || '' }}\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
             }
           EOF
       - name: Checkout
@@ -72,8 +80,13 @@ jobs:
         with:
           name: library
           path: dist/*.tar.gz
-      # TODO:! change this to PyPI (remove repository-url) on real repos
+      - name: Publish to PyPI
+        if: ${{ github.event.inputs.pypi_target == 'PyPI Prod' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
       - name: Publish to TestPyPI
+        if: ${{ github.event.inputs.pypi_target == 'Test PyPI' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
@@ -87,7 +100,7 @@ jobs:
           curl -X POST -H 'Content-type: application/json' \
             --data @- "$SLACK_WEBHOOK_URL" <<EOF
             {
-              "text": "✅ *Published version ${{ steps.bump.outputs.new_version }}* for \`${{ github.repository }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
+              "text": "✅ *Published version ${{ steps.bump.outputs.new_version }}* for \`${{ github.repository }}\`${{ github.event.inputs.pypi_target == 'Test PyPI' && ' (test pypi)' || '' }}\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
             }
           EOF
 
@@ -104,6 +117,6 @@ jobs:
           curl -X POST -H 'Content-type: application/json' \
             --data @- "$SLACK_WEBHOOK_URL" <<EOF
             {
-              "text": "❌ *Publish process failed* for \`${{ github.repository }}\`.\nCheck logs: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>"
+              "text": "❌ *Publish process failed* for \`${{ github.repository }}\`${{ github.event.inputs.pypi_target == 'Test PyPI' && ' (test pypi)' || '' }}.\nCheck logs: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>"
             }
           EOF
