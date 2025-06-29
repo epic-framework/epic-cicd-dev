@@ -43,41 +43,14 @@ jobs:
     environment: production
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.bump.outputs.new_version }}
+      version: ${{ steps.bump_and_build.outputs.new_version }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.11
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: false
-      - name: Bump version
-        id: bump
-        run: |
-          poetry version ${{ github.event.inputs.update_type }}
-          new_version=$(poetry version | awk '{print $2}')
-          echo "new_version=$new_version" >> $GITHUB_OUTPUT
-      - name: Commit version bump and tag
-        run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
-          git commit -am "Bump ${{ github.event.inputs.update_type }} version to ${{ steps.bump.outputs.new_version }}"
-          git tag "v${{ steps.bump.outputs.new_version }}"
-          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git
-          git push origin HEAD --tags
-      - name: Build library
-        run: poetry build --format sdist
-      - name: Archive library
-        uses: actions/upload-artifact@v4
-        with:
-          name: library-${{ steps.bump.outputs.new_version }}
-          path: dist/*.tar.gz
+    - name: Run bump-and-build
+      id: bump_and_build
+      uses: epic-framework/.github/.github/actions/bump-and-build@main
+      with:
+        update_type: ${{ github.event.inputs.update_type }}
+        access_token: ${{ secrets.GH_PAT }}
 
   publish:
     needs: bump_and_build
