@@ -26,15 +26,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Notify Slack (release started)
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
-        run: |
-          curl -X POST -H 'Content-type: application/json' \
-            --data @- "$SLACK_WEBHOOK_URL" <<EOF
-            {
-              "text": "⚙️ *Release started*: \`${{ github.repository }}@${{ github.ref_name }}\`\nTriggered by: \`${{ github.actor }}\`\nVersion bump: \`${{ github.event.inputs.update_type }}\`${{ github.event.inputs.pypi_target == 'Test PyPI' && ' (test pypi)' || '' }}\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
-            }
-          EOF
+        uses: epic-framework/.github/.github/actions/slack-notify@main
+        with:
+          message_type: release-start
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
+          version_bump: ${{ github.event.inputs.update_type }}
+          pypi_target: ${{ github.event.inputs.pypi_target }}
 
   test:
     needs: kickoff
@@ -107,15 +104,12 @@ jobs:
           packages-dir: dist/
           repository-url: https://test.pypi.org/legacy/
       - name: Notify Slack (publish done)
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
-        run: |
-          curl -X POST -H 'Content-type: application/json' \
-            --data @- "$SLACK_WEBHOOK_URL" <<EOF
-            {
-              "text": "✅ *Published version ${{ needs.bump_and_build.outputs.version }}* for \`${{ github.repository }}\`${{ github.event.inputs.pypi_target == 'Test PyPI' && ' (test pypi)' || '' }}\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
-            }
-          EOF
+        uses: epic-framework/.github/.github/actions/slack-notify
+        with:
+          message_type: release-done
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
+          version: ${{ needs.bump_and_build.outputs.version }}
+          pypi_target: ${{ github.event.inputs.pypi_target }}
 
   notify_failure:
     needs: [test, bump_and_build, publish]
@@ -123,12 +117,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Notify Slack (failure)
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
-        run: |
-          curl -X POST -H 'Content-type: application/json' \
-            --data @- "$SLACK_WEBHOOK_URL" <<EOF
-            {
-              "text": "❌ *Release process failed* for \`${{ github.repository }}\`${{ github.event.inputs.pypi_target == 'Test PyPI' && ' (test pypi)' || '' }}.\nCheck logs: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>"
-            }
-          EOF
+        uses: epic-framework/.github/.github/actions/slack-notify
+        with:
+          message_type: release-error
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
+          pypi_target: ${{ github.event.inputs.pypi_target }}
