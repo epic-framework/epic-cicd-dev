@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Notify Slack (release started)
-        uses: epic-framework/.github/.github/actions/slack-notify@main
+        uses: epic-framework/.github/.github/actions/notify-slack@main
         with:
           message_type: release-start
           webhook_url: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
@@ -104,7 +104,7 @@ jobs:
           packages-dir: dist/
           repository-url: https://test.pypi.org/legacy/
       - name: Notify Slack (publish done)
-        uses: epic-framework/.github/.github/actions/slack-notify@main
+        uses: epic-framework/.github/.github/actions/notify-slack@main
         with:
           message_type: release-done
           webhook_url: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
@@ -117,7 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Notify Slack (failure)
-        uses: epic-framework/.github/.github/actions/slack-notify@main
+        uses: epic-framework/.github/.github/actions/notify-slack@main
         with:
           message_type: release-error
           webhook_url: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
