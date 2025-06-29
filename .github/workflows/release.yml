@@ -27,7 +27,7 @@ jobs:
     steps:
       - name: Notify Slack (publish started)
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
             --data @- "$SLACK_WEBHOOK_URL" <<EOF
@@ -97,7 +97,7 @@ jobs:
         run: echo "Published version ${{ steps.bump.outputs.new_version }} (${{ github.event.inputs.update_type }})"
       - name: Notify Slack (publish done)
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
             --data @- "$SLACK_WEBHOOK_URL" <<EOF
@@ -114,7 +114,7 @@ jobs:
     steps:
       - name: Notify Slack (test or publish failure)
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
             --data @- "$SLACK_WEBHOOK_URL" <<EOF
