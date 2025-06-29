@@ -22,10 +22,113 @@ on:
           - "Test PyPI"
 
 jobs:
-  release:
-    uses: epic-framework/.github/.github/workflows/release.yml@main
-    with:
-      update_type: ${{ inputs.update_type }}
-      pypi_target: ${{ inputs.pypi_target }}
-    secrets:
-      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
+  kickoff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack (release started)
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data @- "$SLACK_WEBHOOK_URL" <<EOF
+            {
+              "text": "⚙️ *Release started*: \`${{ github.repository }}@${{ github.ref_name }}\`\nTriggered by: \`${{ github.actor }}\`\nVersion bump: \`${{ github.event.inputs.update_type }}\`${{ github.event.inputs.pypi_target == 'Test PyPI' && ' (test pypi)' || '' }}\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
+            }
+          EOF
+
+  test:
+    needs: kickoff
+    uses: ./.github/workflows/_test.yml
+
+  bump_and_build:
+    needs: test
+    # note: we still need "production" here, for the GH_PAT secret; at least it has no permission to use an OIDC token
+    environment: production
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.new_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: false
+      - name: Bump version
+        id: bump
+        run: |
+          poetry version ${{ github.event.inputs.update_type }}
+          new_version=$(poetry version | awk '{print $2}')
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+      - name: Commit version bump and tag
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git commit -am "Bump ${{ github.event.inputs.update_type }} version to ${{ steps.bump.outputs.new_version }}"
+          git tag "v${{ steps.bump.outputs.new_version }}"
+          git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git
+          git push origin HEAD --tags
+      - name: Build library
+        run: poetry build --format sdist
+      - name: Archive library
+        uses: actions/upload-artifact@v4
+        with:
+          name: library-${{ steps.bump.outputs.new_version }}
+          path: dist/*.tar.gz
+
+  publish:
+    needs: bump_and_build
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: library-${{ needs.bump_and_build.outputs.version }}
+          path: dist/
+      - name: Publish to PyPI
+        if: ${{ github.event.inputs.pypi_target == 'PyPI Prod' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+      - name: Publish to TestPyPI
+        if: ${{ github.event.inputs.pypi_target == 'Test PyPI' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          repository-url: https://test.pypi.org/legacy/
+      - name: Notify Slack (publish done)
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data @- "$SLACK_WEBHOOK_URL" <<EOF
+            {
+              "text": "✅ *Published version ${{ needs.bump_and_build.outputs.version }}* for \`${{ github.repository }}\`${{ github.event.inputs.pypi_target == 'Test PyPI' && ' (test pypi)' || '' }}\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
+            }
+          EOF
+
+  notify_failure:
+    needs: [test, bump_and_build, publish]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack (failure)
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data @- "$SLACK_WEBHOOK_URL" <<EOF
+            {
+              "text": "❌ *Release process failed* for \`${{ github.repository }}\`${{ github.event.inputs.pypi_target == 'Test PyPI' && ' (test pypi)' || '' }}.\nCheck logs: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>"
+            }
+          EOF
