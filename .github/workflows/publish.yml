@@ -87,17 +87,22 @@ jobs:
           curl -X POST -H 'Content-type: application/json' \
             --data @- "$SLACK_WEBHOOK_URL" <<EOF
             {
-              "text": "✅ Published version ${{ steps.bump.outputs.new_version }} for \`${{ github.repository }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
+              "text": "✅ *Published version ${{ steps.bump.outputs.new_version }}* for \`${{ github.repository }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
             }
           EOF
-      - name: Notify Slack (failure)
-        if: always () && failure()
+
+  notify_failure:
+    needs: [test, publish]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack (test or publish failure)
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
             --data @- "$SLACK_WEBHOOK_URL" <<EOF
             {
-              "text": "❌ Publish failed for version ${{ steps.bump.outputs.new_version }} of \`${{ github.repository }}\`\n🔗 <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View on GitHub>"
+              "text": "❌ *Publish process failed* for \`${{ github.repository }}\`.\nCheck logs: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>"
             }
           EOF
