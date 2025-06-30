@@ -68,32 +68,24 @@ jobs:
           name: library-${{ needs.bump_and_build.outputs.version }}
           path: dist/
       - name: Publish to PyPI
-        if: ${{ github.event.inputs.pypi_target == 'PyPI Prod' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
-      - name: Publish to TestPyPI
-        if: ${{ github.event.inputs.pypi_target == 'Test PyPI' }}
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist/
-          repository-url: https://test.pypi.org/legacy/
-      - name: Notify Slack (publish done)
-        uses: epic-framework/.github/.github/actions/notify-slack@main
-        with:
-          message_type: release-done
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
-          version: ${{ needs.bump_and_build.outputs.version }}
-          pypi_target: ${{ github.event.inputs.pypi_target }}
+          repository-url: ${{ github.event.inputs.pypi_target == 'Test PyPI' && 'https://test.pypi.org/legacy/' || '' }}
 
-  notify_failure:
+  notify_result:
     needs: [test, bump_and_build, publish]
-    if: failure()
+    if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Notify Slack (failure)
+      - name: Notify Slack (final outcome)
         uses: epic-framework/.github/.github/actions/notify-slack@main
         with:
-          message_type: release-error
           webhook_url: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
+          version: ${{ needs.bump_and_build.result == 'success' && needs.bump_and_build.outputs.version || '' }}
           pypi_target: ${{ github.event.inputs.pypi_target }}
+          message_type: ${{ 
+            failure() && 'release-error' || 
+            cancelled() && 'release-cancelled' || 
+            'release-done'
+          }}
