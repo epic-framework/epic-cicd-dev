@@ -84,8 +84,4 @@ jobs:
           webhook_url: ${{ secrets.SLACK_WEBHOOK_URL__RELEASE }}
           version: ${{ needs.bump_and_build.result == 'success' && needs.bump_and_build.outputs.version || '' }}
           pypi_target: ${{ github.event.inputs.pypi_target }}
-          message_type: ${{ 
-            failure() && 'release-error' || 
-            cancelled() && 'release-cancelled' || 
-            'release-done'
-          }}
+          message_type: ${{ failure() && 'release-error' || cancelled() && 'release-cancelled' || 'release-done' }}
