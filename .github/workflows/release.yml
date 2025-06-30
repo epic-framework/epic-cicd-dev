@@ -36,6 +36,8 @@ jobs:
   test:
     needs: kickoff
     uses: epic-framework/.github/.github/workflows/test.yml@main
+    with:
+      package_name: epic.cicd
 
   bump_and_build:
     needs: test
