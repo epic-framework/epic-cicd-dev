@@ -17,4 +17,4 @@ jobs:
     uses: epic-framework/.github/.github/workflows/test.yml@main
     with:
       archive_artifacts: true
-      package_name: epic.cicd
+      package_name: epic._cicd_dev
